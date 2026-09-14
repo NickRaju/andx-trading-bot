@@ -13,9 +13,9 @@ in a safe practice mode so you can learn before risking anything.
 Then:
 
 1. **Unzip it** — double-click the downloaded file to get the `andx-trading-bot-main` folder.
-2. **Start it:**
-   - **Mac:** right-click **`Start Bot.command`** → **Open** → **Open** (only needed the first time; macOS blocks downloaded scripts on a normal double-click).
-   - **Windows:** double-click **`Start Bot (Windows).bat`**. If it says Python is missing, install it from [python.org](https://www.python.org/downloads/) (tick **"Add Python to PATH"**) and run it again.
+2. **Start it (one-time security step — every computer does this):**
+   - **Mac:** **right-click** `Start Bot.command` → **Open** → **Open**. If you instead see *"Apple could not verify…"* with only **Done** / **Move to Trash**, click **Done**, then go to ** menu → System Settings → Privacy & Security**, scroll down, and click **"Open Anyway."** One time only.
+   - **Windows:** double-click `Start Bot (Windows).bat`. If a blue "Windows protected your PC" box appears, click **More info → Run anyway**. If it says Python is missing, install it from [python.org](https://www.python.org/downloads/) (tick **"Add Python to PATH"**) and run it again.
    - First launch sets itself up automatically — give it about a minute.
 3. **Your browser opens the dashboard** at `http://127.0.0.1:8300`. **That page is the bot.** Press **Start bot**.
 
