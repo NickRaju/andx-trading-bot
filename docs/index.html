@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ANDX Trading Bot</title>
+<style>
+  :root{
+    --bg:#0c0c0d; --panel:#161617; --ink:#ffffff; --ink2:#b7b6ae;
+    --muted:#8a8880; --line:rgba(255,255,255,.10); --accent:#3987e5;
+    --accent2:#2a78d6; --good:#0ca30c;
+  }
+  *{box-sizing:border-box;margin:0}
+  body{
+    background:radial-gradient(1200px 600px at 50% -10%,#18324f22,transparent),var(--bg);
+    color:var(--ink);
+    font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    padding:48px 20px;
+  }
+  .wrap{width:100%;max-width:640px}
+  .brand{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:36px}
+  .brand .mark{
+    width:34px;height:34px;border-radius:9px;
+    background:linear-gradient(135deg,var(--accent),#7db4ff);
+    display:grid;place-items:center;font-weight:800;color:#06121f;font-size:18px;
+  }
+  .brand b{font-size:15px;font-weight:650;letter-spacing:.02em}
+  .hero{text-align:center;margin-bottom:40px}
+  h1{font-size:44px;line-height:1.05;font-weight:750;letter-spacing:-.02em;margin-bottom:16px}
+  h1 span{background:linear-gradient(120deg,#7db4ff,var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{font-size:18px;color:var(--ink2);max-width:30rem;margin:0 auto}
+  .dl{
+    display:inline-flex;align-items:center;gap:12px;margin-top:32px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff;text-decoration:none;font-size:18px;font-weight:700;
+    padding:17px 30px;border-radius:13px;border:none;cursor:pointer;
+    box-shadow:0 8px 30px -8px var(--accent);transition:transform .12s ease,box-shadow .12s ease;
+  }
+  .dl:hover{transform:translateY(-2px);box-shadow:0 14px 40px -8px var(--accent)}
+  .dl:active{transform:translateY(0)}
+  .dl svg{width:20px;height:20px}
+  .sub{margin-top:14px;font-size:13.5px;color:var(--muted)}
+  .sub .ok{color:var(--good);font-weight:600}
+  .steps{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:26px 28px;margin-top:40px;
+  }
+  .steps h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:20px;font-weight:600}
+  .step{display:grid;grid-template-columns:34px 1fr;gap:16px;align-items:start;padding:14px 0;border-top:1px solid var(--line)}
+  .step:first-of-type{border-top:none;padding-top:0}
+  .num{
+    width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+    background:#0c0c0d;border:1px solid var(--line);font-weight:700;color:var(--accent);font-size:15px;
+  }
+  .step b{font-weight:650}
+  .step p{font-size:14px;color:var(--ink2);margin-top:3px}
+  .mac,.win{display:none}
+  code{background:#0c0c0d;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font:13px/1 ui-monospace,Menlo,monospace}
+  .safe{margin-top:24px;font-size:13.5px;color:var(--ink2);text-align:center;line-height:1.7}
+  .safe b{color:var(--good)}
+  .foot{margin-top:36px;font-size:12.5px;color:var(--muted);text-align:center;max-width:34rem;line-height:1.6}
+  .foot a{color:var(--ink2)}
+  @media(max-width:520px){h1{font-size:34px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="mark">A</span><b>ANDX</b></div>
+
+  <div class="hero">
+    <h1>ANDX <span>Trading Bot</span></h1>
+    <p class="lede">A crypto trading bot you run on your own computer. Trades long and short, four built-in strategies, and a live dashboard.</p>
+    <br>
+    <a class="dl" id="dl" href="https://github.com/NickRaju/andx-trading-bot/archive/refs/heads/main.zip" download>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+      Download ANDX Trading Bot
+    </a>
+    <div class="sub" id="sub">Free · Mac &amp; Windows · starts in safe practice mode</div>
+  </div>
+
+  <div class="steps">
+    <h2>After it downloads — 3 quick steps</h2>
+    <div class="step">
+      <div class="num">1</div>
+      <div><b>Unzip it.</b><p>Double-click the downloaded file to get the <code>andx-trading-bot-main</code> folder.</p></div>
+    </div>
+    <div class="step">
+      <div class="num">2</div>
+      <div>
+        <b>Double-click to run.</b>
+        <p class="mac">Right-click <code>Start Bot.command</code> → <b>Open</b> → <b>Open</b> (only the first time — macOS blocks downloaded files on a normal double-click). It sets itself up in about a minute.</p>
+        <p class="win">Double-click <code>Start Bot (Windows).bat</code>. If it says Python is missing, install it from python.org (tick “Add Python to PATH”) and run it again.</p>
+        <p class="generic">Open the folder and double-click the <b>Start Bot</b> launcher for your system (macOS: right-click → Open the first time).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="num">3</div>
+      <div><b>The dashboard opens by itself.</b><p>Your browser opens the bot at <code>127.0.0.1:8300</code>. Press <b>Start bot</b> — it runs on practice money right away.</p></div>
+    </div>
+  </div>
+
+  <p class="safe"><b>Safe by default.</b> It starts in paper mode — simulated money, real prices, no account needed. Add your own ANDX keys later, only when you choose to trade live.</p>
+
+  <p class="foot">Each person runs their own copy with their own keys — nothing is shared. Keys stay on your computer and are never uploaded. Crypto trading carries real risk; start in practice mode. · <a href="https://github.com/NickRaju/andx-trading-bot">View the code on GitHub</a></p>
+</div>
+
+<script>
+  // OS-aware instructions
+  var ua = navigator.userAgent;
+  var isMac = /Mac/i.test(ua), isWin = /Win/i.test(ua);
+  document.querySelectorAll('.mac').forEach(function(e){ e.style.display = isMac ? 'block':'none'; });
+  document.querySelectorAll('.win').forEach(function(e){ e.style.display = isWin ? 'block':'none'; });
+  document.querySelectorAll('.generic').forEach(function(e){ e.style.display = (isMac||isWin) ? 'none':'block'; });
+
+  // Confirm the download kicked off
+  document.getElementById('dl').addEventListener('click', function(){
+    var s = document.getElementById('sub');
+    s.innerHTML = '<span class="ok">✓ Downloading…</span> check your Downloads folder, then follow the 3 steps below.';
+  });
+</script>
+</body>
+</html>
