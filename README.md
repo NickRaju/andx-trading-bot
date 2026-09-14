@@ -1,73 +1,62 @@
 # ANDX Trading Bot
 
-A crypto trading bot with a local web dashboard for API keys, strategy
-selection, risk controls, and live monitoring. The default venue is **ANDX
-Global** (native connector, [docs.andx.one](https://docs.andx.one/)); Bybit /
-Binance / OKX / KuCoin / Kraken futures are also supported via ccxt.
+A crypto trading bot for **ANDX Global** with a local dashboard. It trades long
+and short on ANDX derivatives, runs four research-backed strategies, and starts
+in a safe practice mode so you can learn before risking anything.
 
-**ANDX specifics:** the connector speaks ANDX's GraphQL API v4
-([docs.andxus.io](https://docs.andxus.io)) — candles, quotes, balances, and
-orders are all native. Auth is just **API key + secret** (exchanged for a JWT
-via `service_signin`, refreshed automatically). ANDX currently trades spot,
-so the bot goes **long/flat** there — long signals buy the coin, short
-signals sell back to USDT, leverage capped at 1×. The platform's margin API
-(`margin_instruments`, `create_margin_order` with leverage/SL/TP) exists but
-all margin instruments report `is_trading_on: false`; when ANDX enables
-margin, real shorts can be added on top of `andx.py`'s margin hooks. On the
-ccxt perp exchanges the bot goes **long and short** with leverage today.
+---
 
-## Quick start
+## ⬇️ Download & run (students start here)
 
-```bash
-cd trading_bot
-../.venv/bin/python app.py
-```
+**[➡️ Click here to download the bot (.zip)](https://github.com/NickRaju/andx-trading-bot/archive/refs/heads/main.zip)**
 
-Open **http://127.0.0.1:8300**. The bot starts in **paper mode** — simulated
-money against real market data, no API keys needed. Click **Start bot**.
+Then:
 
-## Strategies (chosen from published backtest research)
+1. **Unzip it** — double-click the downloaded file to get the `andx-trading-bot-main` folder.
+2. **Start it:**
+   - **Mac:** right-click **`Start Bot.command`** → **Open** → **Open** (only needed the first time; macOS blocks downloaded scripts on a normal double-click).
+   - **Windows:** double-click **`Start Bot (Windows).bat`**. If it says Python is missing, install it from [python.org](https://www.python.org/downloads/) (tick **"Add Python to PATH"**) and run it again.
+   - First launch sets itself up automatically — give it about a minute.
+3. **Your browser opens the dashboard** at `http://127.0.0.1:8300`. **That page is the bot.** Press **Start bot**.
 
-| Strategy | What it does | When it wins |
-|---|---|---|
-| **Auto (Regime Switch)** — default | Measures trend strength with ADX; routes to trend-following in trending markets, mean-reversion in ranges | All regimes — research shows the regime decides which family wins |
-| **EMA Trend-Following** | EMA 21/55 crossover + ADX filter, ATR trailing stop, longs and shorts | Trending markets — the best-documented edge in crypto |
-| **RSI Mean-Reversion** | Buys oversold at lower Bollinger band, shorts overbought at upper, exits at the mid-band; refuses to fade strong trends | Ranging markets (backtests: ~74% win rate, lower risk) |
-| **Donchian Breakout** | Turtle-style: enter 20-bar breakouts, exit opposite 10-bar channel | Sustained momentum moves |
+It opens in **paper mode** — simulated money, real market prices, no account or keys needed. Trade, learn, and edit the code with zero risk.
 
-Risk management is volatility-adjusted (the approach academic backtests favor):
-position size = (equity × risk-per-trade) / (ATR × stop multiple), with caps on
-leverage, per-position notional, and open positions, plus a **daily-loss kill
-switch** that flattens everything and pauses trading.
+---
 
-## Going live (please read)
+## Going live with your own account
 
-1. **Paper-trade first** for at least a few weeks and check the stats.
-2. Then try **Testnet** mode (exchange sandbox — real order flow, fake money).
-   Create testnet keys on your exchange's testnet site.
-3. Only then consider **Live**. Start with money you can afford to lose
-   entirely, 1% risk per trade, and low leverage.
+When you're ready to trade real money:
 
-When creating API keys on your exchange, enable **trading permission only —
-never withdrawals** — and IP-restrict the key to your machine if the exchange
-supports it. Keys are stored in `trading_bot/secrets.json` with owner-only file
-permissions, are shown only masked in the UI, and are sent nowhere except your
-exchange. The dashboard binds to 127.0.0.1 only.
+1. Create API keys in **your own ANDX account** with **trade permission only — never withdrawals**. Use *your* keys, never someone else's.
+2. On the dashboard, open **Settings → Exchange & API keys**, paste your key + secret, and hit **Save & test keys** (it checks them against your account).
+3. Switch **Trading mode** to **Live** and press Start. You'll be asked to confirm.
 
-## Files
+Your keys are stored **only on your own computer** (`secrets.json`, which is git-ignored and never uploaded) and are sent nowhere except ANDX.
 
-- `app.py` — Flask dashboard server (run this)
-- `engine.py` — trading loop: signals → position reconciliation → stops
-- `strategies.py` — indicators + the four strategies
-- `risk.py` — sizing, ATR/trailing stops, kill switch
-- `andx.py` — native ANDX GraphQL client (JWT auth, candles, orders, balances)
-- `exchange.py` — market data (with fallback sources), paper + live + ANDX brokers
-- `store.py` — settings, secrets, SQLite trade/equity history
-- `bot.db` — created on first run
+---
+
+## The dashboard
+
+- **⚡ Derivatives** — trade long *and* short with leverage (stops enforced by the exchange). Off = spot only (buy / sell to USDT).
+- **🛡️ Conservative** — patient, profit-focused mode: fewer high-conviction trades, smaller risk, wider stops, daily-loss circuit breaker.
+- **Start / Stop / Stop & close all** — run control; "close all" flattens every position at market.
+- **🌓** — light / dark theme.
+- Tabs: **Overview** (equity, signals, positions), **Activity** (trade history, log), **Settings** (keys, config, risk).
+
+## Strategies
+
+- **Auto (Regime Switch)** — default; trend-follows in trends, mean-reverts in ranges (ADX decides).
+- **EMA Trend-Following**, **RSI Mean-Reversion**, **Donchian Breakout** — force one style.
+
+Risk controls: volatility-based position sizing, ATR stops, leverage/position caps, and a daily-loss kill switch. **ATR stop** = the auto exit price, set a few normal price-wiggles away from entry.
+
+## Editing the code (competition)
+
+This is a template — click **"Use this template"** to get your own copy you can edit and commit to. The bot's brains live in `strategies.py` (signals) and `risk.py` (sizing/stops). Change them, restart the bot, and watch the difference in paper mode.
 
 ## Disclaimer
 
-Trading cryptocurrency, especially with leverage and short positions, can lose
-more than you expect, quickly. Past backtest performance does not guarantee
-future results. No strategy wins in all regimes. This software is provided
-as-is with no warranty; you are responsible for trades made with your keys.
+Crypto trading — especially leveraged and short — can lose money quickly. Past
+performance doesn't predict future results; no strategy wins in all markets.
+This software is provided as-is, with no warranty. You are responsible for any
+trades made with your keys. Start in paper mode. Start small.
