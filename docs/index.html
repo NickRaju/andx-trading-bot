@@ -84,10 +84,12 @@
   </div>
 
   <div class="steps" style="margin-top:28px">
-    <h2>✅ No-warning install (Mac — recommended)</h2>
-    <p class="lede" style="font-size:15px;text-align:left;margin-bottom:14px">Skip the security warning entirely. Open <b>Terminal</b> (press ⌘+Space, type <b>Terminal</b>, Enter), paste this one line, and press Enter — it downloads, sets up, and opens the bot:</p>
+    <h2>✅ No-warning install (recommended)</h2>
+    <p class="lede" style="font-size:15px;text-align:left;margin-bottom:6px"><b>On a Mac:</b> open <b>Terminal</b> (⌘+Space, type <b>Terminal</b>, Enter), paste this, press Enter:</p>
     <div class="cmd"><code>curl -fsSL https://raw.githubusercontent.com/andxtrading/andx-trading-bot/main/install.sh | bash</code></div>
-    <p class="sub" style="text-align:left;margin-top:10px">Nothing to double-click, no security prompt — because Terminal downloads don't get flagged. If Python isn't installed it'll tell you where to get it.</p>
+    <p class="lede" style="font-size:15px;text-align:left;margin:16px 0 6px"><b>On Windows:</b> open <b>PowerShell</b> (click Start, type <b>PowerShell</b>, Enter), paste this, press Enter:</p>
+    <div class="cmd"><code>irm https://raw.githubusercontent.com/andxtrading/andx-trading-bot/main/install.ps1 | iex</code></div>
+    <p class="sub" style="text-align:left;margin-top:10px">Both download, set up, and open the bot with <b>no security prompt</b>. If Python isn't installed, it tells you where to get it. (Windows: use <b>PowerShell</b>, not Command Prompt.)</p>
   </div>
 
   <div class="steps">

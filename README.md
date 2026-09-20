@@ -6,15 +6,19 @@ in a safe practice mode so you can learn before risking anything.
 
 ---
 
-## ✅ Easiest on Mac — no security warning (recommended)
+## ✅ No security warning (recommended)
 
-Open **Terminal** (press ⌘+Space, type **Terminal**, press Enter), paste this one line, and press Enter:
-
+**Mac** — open **Terminal** (⌘+Space, type **Terminal**, Enter), paste this, press Enter:
 ```
 curl -fsSL https://raw.githubusercontent.com/andxtrading/andx-trading-bot/main/install.sh | bash
 ```
 
-It downloads, sets up, and opens the bot — **with no security prompt at all** (Terminal downloads aren't flagged the way browser downloads are). Your files land in `~/andx-trading-bot`. To start it again later, paste the same line.
+**Windows** — open **PowerShell** (Start → type **PowerShell** → Enter), paste this, press Enter:
+```
+irm https://raw.githubusercontent.com/andxtrading/andx-trading-bot/main/install.ps1 | iex
+```
+
+Both download, set up, and open the bot — **with no security prompt** (Terminal/PowerShell downloads aren't flagged the way browser downloads are). Files land in your home folder under `andx-trading-bot`; to start it again later, paste the same line. If Python isn't installed, it tells you where to get it. *(Windows: use PowerShell, not Command Prompt.)*
 
 ---
 
