@@ -3,6 +3,7 @@ fetches candles for each symbol, asks the strategy for a desired position,
 and reconciles reality to it (open long / open short / flip / flatten),
 with ATR stops, trailing stops, and a daily-loss kill switch."""
 
+import importlib
 import subprocess
 import threading
 import time
@@ -13,9 +14,11 @@ import pandas as pd
 
 import risk as risk_mod
 import store
+import strategies as strategy_module   # reloaded on each start() so edits to
+                                       # strategies.py apply without a full quit
 from exchange import (MarketData, PaperBroker, LiveBroker, AndxBroker,
                       AndxMarginBroker, Position)
-from strategies import make_strategy, atr, htf_bias, seeded_params
+from strategies import make_strategy, atr, htf_bias
 
 TIMEFRAME_SECONDS = {"15m": 900, "1h": 3600, "4h": 14400, "1d": 86400}
 
@@ -247,19 +250,18 @@ class BotEngine:
                 except Exception as e:
                     self.log(f"universe ranking skipped ({e}) — trading the full list", "warn")
 
-            # Competition mode: if a student ID is set (and no explicit params),
-            # seed each bot's parameters from the ID so no two students' bots
-            # trade the same. No student ID (e.g. the operator's own bot) ->
-            # unchanged behavior.
-            params = cfg.get("strategy_params")
-            if not params and cfg.get("student_id"):
-                params = seeded_params(str(cfg["student_id"]), cfg["strategy"])
-                self.log(f"competition mode — settings seeded from student ID "
-                         f"'{cfg['student_id']}' so this bot is unique "
-                         f"(fast={params['fast']}, slow={params['slow']}, "
-                         f"rsi {params['rsi_buy']}/{params['rsi_sell']})")
+            # Everyone starts from the same tuned strategy; students compete by
+            # EDITING the code (see the Edit Strategy tab / strategies.py), not
+            # by luck of a random seed. Reload the module so a student's saved
+            # edits take effect on this start (no full app relaunch needed).
+            try:
+                importlib.reload(strategy_module)
+            except Exception as e:
+                self.running = False
+                self.status = "stopped"
+                return False, f"your strategy code has an error: {e}"
             self.strategies = {
-                s: make_strategy(cfg["strategy"], params)
+                s: strategy_module.make_strategy(cfg["strategy"], cfg.get("strategy_params"))
                 for s in cfg["symbols"]
             }
             self.volume_target_hit = False

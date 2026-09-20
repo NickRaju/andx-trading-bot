@@ -50,18 +50,20 @@ Your keys are stored **only on your own computer** (`secrets.json`, which is git
 
 Risk controls: volatility-based position sizing, ATR stops, leverage/position caps, and a daily-loss kill switch. **ATR stop** = the auto exit price, set a few normal price-wiggles away from entry.
 
-## Competition — make your bot your own
+## Competition — build your own edge
 
-**Step 1: enter your Student ID.** On the dashboard, open **Settings → Bot settings → Student ID** and type a unique ID (your name or student number). The bot **seeds its settings from your ID**, so every student's bot trades differently out of the box — no two overlap. Same ID always gives the same starting settings.
+Everyone starts from the **same** tuned bot. You compete by **editing the strategy** — the more original and effective your code, the better you do. Two ways to edit:
 
-**Step 2: edit the code to build your edge.** This is a GitHub **template** — click **"Use this template"** to get your own copy you can edit and commit. The bot's brain is `strategies.py` (the buy/sell logic); `risk.py` controls sizing and stops. For example, in `strategies.py`:
+**Easiest — right in the dashboard.** Open the **Edit Strategy** tab. It shows the bot's brain (`strategies.py`), where the buy/sell decisions live. Change the logic, click **Save & Apply**, and your bot immediately runs your code. It's checked for errors first — **broken code is refused, so you can't brick your bot** — and **Restore original** puts it back anytime. For example, in the `EMATrend` strategy:
 ```python
 fast = self.p("fast", 21)   # faster/slower moving averages
 slow = self.p("slow", 55)
 ```
-Change the logic, **save**, then **quit and relaunch** the bot (code changes need a restart). Test in **paper mode** so mistakes cost practice money, not real money.
+Test in **paper mode** so mistakes cost practice money, not real money.
 
-Whatever you write in your own copy is what you submit — the more original your strategy, the more you stand out. Anything you set in the code overrides the Student-ID seeding.
+**Full control — edit the files.** This repo is a GitHub **template**: click **"Use this template"** for your own copy, edit `strategies.py` (signals) and `risk.py` (sizing/stops) in any editor, and commit. That copy is your competition entry.
+
+Put your name or student number in **Settings → Your name / Student ID** to tag your entry.
 
 ## Disclaimer
 

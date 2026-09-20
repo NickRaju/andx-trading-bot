@@ -201,6 +201,14 @@
   .sig.long { border-color: rgba(12,163,12,.45); }  .sig.long b { color: var(--good); }
   .sig.short { border-color: rgba(208,59,59,.5); }  .sig.short b { color: var(--critical); }
   .sig.flat b { color: var(--muted); font-weight: 500; }
+  #codeArea {
+    width: 100%; height: 60vh; min-height: 340px; resize: vertical;
+    font: 12.5px/1.55 ui-monospace, Menlo, monospace;
+    color: var(--ink); background: var(--page);
+    border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+    tab-size: 4; white-space: pre; overflow: auto;
+  }
+  #codeArea:focus { outline: 2px solid var(--series-1); outline-offset: -1px; }
 </style>
 </head>
 <body>
@@ -238,6 +246,7 @@
 <nav class="tabs" aria-label="Dashboard sections">
   <button class="tab active" data-tab="overview">Overview</button>
   <button class="tab" data-tab="activity">Activity</button>
+  <button class="tab" data-tab="code">Edit Strategy</button>
   <button class="tab" data-tab="settings">Settings</button>
 </nav>
 
@@ -313,9 +322,9 @@
   <div>
     <div class="card">
       <h2>Bot settings</h2>
-      <label for="studentId">Student ID <span style="color:var(--muted)">(competition — makes your bot unique)</span></label>
+      <label for="studentId">Your name / Student ID <span style="color:var(--muted)">(competition tag)</span></label>
       <input id="studentId" type="text" autocomplete="off" placeholder="your name or student number">
-      <div class="hint">Enter a unique ID and your bot's settings are seeded from it, so no two students trade the same. Edit <code>strategies.py</code> to override it with your own strategy.</div>
+      <div class="hint">Everyone starts from the same bot — you compete by <b>editing the strategy</b> (the <b>Edit Strategy</b> tab, or <code>strategies.py</code>). This tag just labels your entry.</div>
       <label for="mode">Trading mode</label>
       <select id="mode">
         <option value="paper">Paper (simulated — no keys needed)</option>
@@ -359,6 +368,20 @@
   </div>
 </section>
 
+<section class="tabpane" id="tab-code" hidden>
+  <div class="card">
+    <h2>Edit Strategy — your bot's brain</h2>
+    <p class="hint" style="margin-bottom:12px">This is <code>strategies.py</code>, where the buy/sell decisions live. Change the logic, hit <b>Save &amp; Apply</b>, and your bot runs your code. It's checked for errors first — <b>broken code is refused, so you can't brick your bot.</b> A good place to start: the numbers in <code>EMATrend</code> (fast/slow moving averages) or <code>RSIMeanReversion</code> (the RSI buy/sell levels). Test in paper mode.</p>
+    <textarea id="codeArea" spellcheck="false" placeholder="Loading your strategy code…"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button id="btnSaveCode" class="primary">Save &amp; Apply</button>
+      <button id="btnReloadCode" class="small">Reload from file</button>
+      <button id="btnRestoreCode" class="small">Restore original</button>
+    </div>
+    <div class="keystatus" id="codeStatus"></div>
+  </div>
+</section>
+
 </div><!-- /wrap -->
 
 <script>
@@ -382,10 +405,12 @@ $("btnTheme").addEventListener("click", () => {
 });
 
 // tabs: Overview / Activity / Settings
+let codeLoaded = false;
 const setTab = name => {
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
   document.querySelectorAll(".tabpane").forEach(p => { p.hidden = p.id !== "tab-" + name; });
   try { localStorage.setItem("andx_tab", name); } catch {}
+  if (name === "code" && !codeLoaded) loadCode();
 };
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => setTab(t.dataset.tab)));
 try { const t0 = localStorage.getItem("andx_tab"); if (t0) setTab(t0); } catch {}
@@ -708,6 +733,44 @@ async function closePos(symbol) {
   await api("/api/close", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({symbol})});
   refresh();
 }
+
+// ------------------------------------------------------------ code editor
+async function loadCode() {
+  const r = await api("/api/code");
+  if (r.ok) { $("codeArea").value = r.code; codeLoaded = true; }
+  else { $("codeStatus").textContent = r.detail || "Could not load code."; $("codeStatus").className = "keystatus err"; }
+}
+function codeStatus(msg, ok) {
+  const el = $("codeStatus");
+  el.textContent = msg;
+  el.className = "keystatus " + (ok ? "ok" : "err");
+}
+$("btnSaveCode").addEventListener("click", async () => {
+  codeStatus("Checking your code…", true);
+  const r = await api("/api/code", {method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({code: $("codeArea").value})});
+  if (r.ok) codeStatus(r.applied ? "✓ Saved and applied — your bot is now running your code."
+                                 : "✓ Saved. Press Start bot to run it.", true);
+  else codeStatus("✗ " + (r.detail || "Save failed."), false);
+  refresh();
+});
+$("btnReloadCode").addEventListener("click", () => { codeLoaded = false; loadCode(); codeStatus("Reloaded from file.", true); });
+$("btnRestoreCode").addEventListener("click", async () => {
+  if (!confirm("Restore the original strategy code? Your changes to the file will be replaced.")) return;
+  const r = await api("/api/code/restore", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"});
+  if (r.ok) { codeLoaded = false; await loadCode(); codeStatus("Original strategy restored.", true); }
+  else codeStatus("✗ " + (r.detail || "Restore failed."), false);
+  refresh();
+});
+// Tab key inserts 4 spaces instead of leaving the editor (Python needs indent)
+$("codeArea").addEventListener("keydown", e => {
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const el = e.target, s = el.selectionStart, en = el.selectionEnd;
+    el.value = el.value.slice(0, s) + "    " + el.value.slice(en);
+    el.selectionStart = el.selectionEnd = s + 4;
+  }
+});
 
 refresh();
 setInterval(refresh, 5000);

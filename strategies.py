@@ -257,37 +257,3 @@ STRATEGIES = {cls.name: cls for cls in (AutoRegime, EMATrend, RSIMeanReversion, 
 def make_strategy(name: str, params: dict | None = None) -> Strategy:
     cls = STRATEGIES.get(name, AutoRegime)
     return cls(params)
-
-
-import hashlib
-
-
-def seeded_params(student_id: str, strategy: str = "auto") -> dict:
-    """Competition mode: derive a unique-but-sensible parameter set from a
-    student's ID so every UNEDITED bot trades differently — no two students
-    overlap out of the box. Deterministic (same ID -> same settings), and a
-    student who writes their own params or strategy overrides all of it.
-
-    Gated by the caller on the presence of a student_id, so a bot with no ID
-    (e.g. the operator's own) behaves exactly as before."""
-    h = hashlib.sha256(str(student_id).strip().lower().encode()).digest()
-
-    def pick(i, lo, hi):
-        return lo + (h[i] % (hi - lo + 1))
-
-    fast = pick(0, 8, 30)
-    slow = fast + pick(1, 20, 70)          # always well above fast
-    return {
-        "fast": fast,
-        "slow": slow,
-        "adx_min": pick(2, 15, 28),
-        "adx_trend": pick(3, 22, 30),
-        "adx_range": pick(4, 14, 20),
-        "rsi_length": pick(5, 10, 20),
-        "rsi_buy": pick(6, 20, 35),
-        "rsi_sell": pick(7, 65, 80),
-        "bb_length": pick(8, 14, 30),
-        "bb_mult": round(1.6 + (h[9] % 9) / 10.0, 1),   # 1.6 – 2.4
-        "entry": pick(10, 15, 40),
-        "exit": pick(11, 5, 14),
-    }

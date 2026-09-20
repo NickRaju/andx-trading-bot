@@ -102,6 +102,108 @@ def save_keys():
     return jsonify(result)
 
 
+_BASE = os.path.dirname(os.path.abspath(__file__))
+STRATEGIES_FILE = os.path.join(_BASE, "strategies.py")
+STRATEGIES_ORIGINAL = os.path.join(_BASE, "strategies_original.py")
+
+
+@app.get("/api/code")
+def get_code():
+    """Return the student's editable strategy code."""
+    try:
+        with open(STRATEGIES_FILE) as f:
+            return jsonify({"ok": True, "code": f.read(),
+                            "has_backup": os.path.exists(STRATEGIES_ORIGINAL)})
+    except OSError as e:
+        return jsonify({"ok": False, "detail": str(e)}), 500
+
+
+@app.post("/api/code")
+def save_code():
+    """Save edited strategy code — but ONLY if it's valid Python that imports
+    cleanly, so a typo can never brick the bot. Keeps a one-time backup of the
+    original, then applies the change live if the bot is running."""
+    import subprocess
+    import sys
+    import tempfile
+    import shutil
+    body = request.get_json(force=True)
+    code = body.get("code", "")
+    if not code.strip():
+        return jsonify({"ok": False, "detail": "The code is empty."}), 400
+    # 1) syntax check
+    try:
+        compile(code, "strategies.py", "exec")
+    except SyntaxError as e:
+        return jsonify({"ok": False,
+                        "detail": f"Syntax error on line {e.lineno}: {e.msg}"}), 400
+    # 2) import check in a throwaway process (catches undefined names, bad
+    #    edits to the STRATEGIES table, etc.) BEFORE we touch the real file
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as tf:
+        tf.write(code)
+        tmp = tf.name
+    try:
+        probe = (
+            "import importlib.util,sys;"
+            f"spec=importlib.util.spec_from_file_location('t',{tmp!r});"
+            "m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);"
+            "assert hasattr(m,'make_strategy'),'must keep make_strategy()';"
+            "assert hasattr(m,'STRATEGIES'),'must keep the STRATEGIES table'"
+        )
+        r = subprocess.run([sys.executable, "-c", probe],
+                           capture_output=True, text=True, timeout=20)
+        if r.returncode != 0:
+            err = (r.stderr.strip().splitlines() or ["import failed"])[-1]
+            return jsonify({"ok": False, "detail": f"Code won't run: {err}"}), 400
+    except subprocess.TimeoutExpired:
+        return jsonify({"ok": False, "detail": "Code took too long to load — "
+                        "check for an infinite loop at the top level."}), 400
+    finally:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+    # 3) one-time backup of the original, then write
+    if not os.path.exists(STRATEGIES_ORIGINAL):
+        try:
+            shutil.copy(STRATEGIES_FILE, STRATEGIES_ORIGINAL)
+        except OSError:
+            pass
+    try:
+        with open(STRATEGIES_FILE, "w") as f:
+            f.write(code)
+    except OSError as e:
+        return jsonify({"ok": False, "detail": str(e)}), 500
+    # 4) apply live if running (restart reloads the strategy module)
+    applied = False
+    if ENGINE.running:
+        ENGINE.stop(flatten=False)
+        ok, detail = ENGINE.start()
+        applied = ok
+        if not ok:
+            return jsonify({"ok": False,
+                            "detail": f"Saved, but couldn't apply: {detail}"}), 400
+    ENGINE.log("strategy code updated" + (" and applied" if applied else " (saved)"))
+    return jsonify({"ok": True, "applied": applied})
+
+
+@app.post("/api/code/restore")
+def restore_code():
+    """Put back the original strategy code."""
+    import shutil
+    if not os.path.exists(STRATEGIES_ORIGINAL):
+        return jsonify({"ok": False, "detail": "No original backup found."}), 400
+    try:
+        shutil.copy(STRATEGIES_ORIGINAL, STRATEGIES_FILE)
+    except OSError as e:
+        return jsonify({"ok": False, "detail": str(e)}), 500
+    applied = False
+    if ENGINE.running:
+        ENGINE.stop(flatten=False)
+        applied = ENGINE.start()[0]
+    return jsonify({"ok": True, "applied": applied})
+
+
 @app.delete("/api/keys")
 def delete_keys():
     exchange = request.args.get("exchange") or store.load_config()["exchange"]
