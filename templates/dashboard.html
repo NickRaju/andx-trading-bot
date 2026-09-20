@@ -209,6 +209,13 @@
     tab-size: 4; white-space: pre; overflow: auto;
   }
   #codeArea:focus { outline: 2px solid var(--series-1); outline-offset: -1px; }
+  .guide p { font-size: 13.5px; color: var(--ink-2); margin-bottom: 8px; }
+  .guide .g-row { display: grid; grid-template-columns: 168px 1fr; gap: 14px; padding: 10px 0; border-top: 1px solid var(--grid); font-size: 13.5px; }
+  .guide .g-row:first-of-type { border-top: none; }
+  .guide .g-row b { color: var(--ink); font-weight: 650; }
+  .guide .g-row span { color: var(--ink-2); }
+  .guide .g-row .k { color: var(--series-1); font-weight: 650; }
+  @media (max-width: 560px) { .guide .g-row { grid-template-columns: 1fr; gap: 2px; } }
 </style>
 </head>
 <body>
@@ -245,6 +252,7 @@
 
 <nav class="tabs" aria-label="Dashboard sections">
   <button class="tab active" data-tab="overview">Overview</button>
+  <button class="tab" data-tab="guide">Guide</button>
   <button class="tab" data-tab="activity">Activity</button>
   <button class="tab" data-tab="code">Edit Strategy</button>
   <button class="tab" data-tab="settings">Settings</button>
@@ -280,6 +288,65 @@
       </table>
       <div class="empty" id="posEmpty">No open positions.</div>
     </div>
+</section>
+
+<section class="tabpane" id="tab-guide" hidden>
+  <div class="card guide">
+    <h2>What this bot is</h2>
+    <p>A starter crypto trading bot provided by ANDX. It comes with proven default strategies, but it's a <b>base to build on</b> — you're meant to change the settings and edit the code to make it trade your way. It runs on your own computer and starts on <b>practice money</b> so you can experiment with zero risk.</p>
+  </div>
+
+  <div class="card guide">
+    <h2>Top bar</h2>
+    <div class="g-row"><b>Start bot</b><span>Turns the bot on. It begins reading the market and trading. When running, this button becomes <b>Stop</b>.</span></div>
+    <div class="g-row"><b>Stop</b><span>Pauses the bot. It stops making new trades but keeps any positions it's holding.</span></div>
+    <div class="g-row"><b>Stop &amp; close all</b><span>Stops the bot <i>and</i> sells everything at market — the emergency "get me out" button.</span></div>
+    <div class="g-row"><b>⚡ Derivatives</b><span>ON: trade long <i>and</i> short with leverage (bet up or down). OFF: spot only — buy coins, sell back to cash. Switching closes open positions first.</span></div>
+    <div class="g-row"><b>🛡️ Conservative</b><span>Calmer, profit-focused mode: fewer, stronger trades, smaller risk each, wider stops, a daily-loss circuit breaker.</span></div>
+    <div class="g-row"><b>🌓</b><span>Switch between light and dark theme.</span></div>
+  </div>
+
+  <div class="card guide">
+    <h2>The numbers up top (tiles)</h2>
+    <div class="g-row"><b>Equity</b><span>Your total account value right now (cash + open positions).</span></div>
+    <div class="g-row"><b>Total P&amp;L</b><span>Profit or loss across all your closed trades.</span></div>
+    <div class="g-row"><b>Win rate</b><span>Percent of closed trades that made money.</span></div>
+    <div class="g-row"><b>Open positions</b><span>How many coins you're currently holding, and their live unrealized profit/loss.</span></div>
+  </div>
+
+  <div class="card guide">
+    <h2>Tabs</h2>
+    <div class="g-row"><b>Overview</b><span>Your equity curve, the current buy/sell <b>signals</b> per coin, and your open positions (each with a <b>Close</b> button to sell it now).</span></div>
+    <div class="g-row"><b>Activity</b><span>Your full trade history (entries, exits, profit) and a live log of everything the bot does.</span></div>
+    <div class="g-row"><b>Edit Strategy</b><span>The bot's actual code. Change it, hit <b>Save &amp; Apply</b>, and your bot runs your version. Broken code is refused, and <b>Restore original</b> undoes it.</span></div>
+    <div class="g-row"><b>Settings</b><span>Your name, trading mode, which coins, and all the risk controls (below).</span></div>
+  </div>
+
+  <div class="card guide">
+    <h2>Settings explained</h2>
+    <div class="g-row"><b>Add name</b><span>Tags your bot for the competition.</span></div>
+    <div class="g-row"><b>Trading mode</b><span><b>Paper</b> = practice money (safe, start here). <b>Live</b> = real money with your own keys.</span></div>
+    <div class="g-row"><b>Strategy</b><span>The playbook. <b>Auto</b> picks trend-following or mean-reversion based on the market; the others force one style.</span></div>
+    <div class="g-row"><b>Symbols</b><span>Which coins to trade. <b>ALL</b> = every ANDX pair, or list your own.</span></div>
+    <div class="g-row"><b>Timeframe</b><span>How zoomed-in the bot reads charts. 15m = fast &amp; active; 1d = slow &amp; patient.</span></div>
+    <div class="g-row"><b>Reset practice account</b><span>Starts your practice balance fresh.</span></div>
+  </div>
+
+  <div class="card guide">
+    <h2>Risk controls (your safety limits)</h2>
+    <div class="g-row"><b>Risk per trade %</b><span>Most of the account one losing trade can cost. 1% = a loss can't hurt more than 1%.</span></div>
+    <div class="g-row"><b>ATR stop ×</b><span>Where the auto "get-out" price sits. ATR is a coin's normal daily wiggle; this places the stop that many wiggles away, so normal noise doesn't kick you out but a real move does.</span></div>
+    <div class="g-row"><b>Max leverage</b><span>How much borrowed money it may use (derivatives). Multiplies wins <i>and</i> losses.</span></div>
+    <div class="g-row"><b>Max positions</b><span>Most coins it can hold at once.</span></div>
+    <div class="g-row"><b>Max position % of equity</b><span>Most it can put into any single coin.</span></div>
+    <div class="g-row"><b>Daily loss kill switch %</b><span>Lose this much in one day and the bot sells everything and stops until tomorrow.</span></div>
+  </div>
+
+  <div class="card guide">
+    <h2>Going live &amp; safety</h2>
+    <p><b>Start in paper mode.</b> Learn and test with practice money first. When you're ready for real money: create API keys in <i>your own</i> ANDX account (<b>trade permission only, never withdrawals</b>), paste them in Settings → Save &amp; test keys, switch Trading mode to Live, and confirm.</p>
+    <p>Your keys are stored only on your computer and are never uploaded. Crypto trading — especially leveraged and short — can lose money fast. Start small.</p>
+  </div>
 </section>
 
 <section class="tabpane" id="tab-activity" hidden>
