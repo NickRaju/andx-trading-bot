@@ -5,7 +5,7 @@
 set -e
 
 DIR="$HOME/andx-trading-bot"
-ZIP_URL="https://github.com/NickRaju/andx-trading-bot/archive/refs/heads/main.zip"
+ZIP_URL="https://github.com/andxtrading/andx-trading-bot/archive/refs/heads/main.zip"
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo ""
