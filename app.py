@@ -65,6 +65,8 @@ def save_settings():
     for key in ("exchange", "timeframe", "strategy", "mode"):
         if key in body:
             cfg[key] = body[key]
+    if "student_id" in body:
+        cfg["student_id"] = str(body["student_id"]).strip()
     if "symbols" in body:
         symbols = [s.strip() for s in body["symbols"] if s.strip()]
         if symbols:
@@ -227,6 +229,43 @@ def delete_alert():
     except ValueError:
         return jsonify({"ok": False, "detail": "bad alert id"}), 400
     return jsonify({"ok": store.delete_alert(alert_id)})
+
+
+@app.post("/api/sphinx")
+def sphinx_intake():
+    """The receiving end of the Sphinx handoff. Accepts the three packet
+    types; nothing executes here — portfolios wait for adoption, trade
+    ideas become tap-to-approve proposals, protection applies stops/alerts."""
+    body = request.get_json(silent=True) or {}
+    ptype = str(body.get("type", "")).lower()
+    payload = body.get("payload") or {}
+    if ptype == "portfolio":
+        targets = payload.get("targets") or []
+        if not targets or not isinstance(targets, list):
+            return jsonify({"ok": False, "error": "portfolio needs targets"}), 400
+        pid = store.add_portfolio(payload.get("name", "Sphinx portfolio"),
+                                  payload.get("source", "sphinx"), payload)
+        return jsonify({"ok": True, "portfolio_id": pid,
+                        "status": "offered — adopt it via ANDX AI"})
+    if ptype == "trade_idea":
+        side = 1 if str(payload.get("side", "long")).lower() in ("long", "buy") else -1
+        try:
+            usd = float(payload.get("usd_amount") or payload.get("notional") or 0)
+            stop = payload.get("stop")
+            tp = payload.get("target")
+            result = ENGINE.manual_propose(
+                str(payload.get("symbol", "")).upper(), side, usd,
+                float(stop) if stop else None, float(tp) if tp else None)
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "error": "bad numbers in trade idea"}), 400
+        ok = "error" not in result
+        return jsonify({"ok": ok, **result}), (200 if ok else 400)
+    if ptype == "protection":
+        result = ENGINE.apply_protection(payload)
+        ok = "refused" not in result
+        return jsonify({"ok": ok, **result}), (200 if ok else 403)
+    return jsonify({"ok": False,
+                    "error": "type must be portfolio, trade_idea, or protection"}), 400
 
 
 @app.get("/api/ai_status")

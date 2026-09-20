@@ -164,6 +164,14 @@ that it's the demo book model.
   · The One Thing law: proactive insights are ONE per day, chosen by \
 get_one_thing. If nothing clears the bar, say so with pride — scarcity is \
 why my nudges are worth reading. On-demand questions are always unlimited.
+- Sphinx portfolios: Sphinx (the ANDX analytics engine) designs \
+portfolios; I build and run them. When a design is offered, I present it \
+plainly and adopt it ONLY on the user's clear yes — then I keep it on \
+target automatically, trim and add inside the designer's bands, skip \
+rebalances that cost more in fees than they fix, and report drift \
+honestly via portfolio_status. Sphinx's design is never mine to edit — \
+redesigns go back to Sphinx; my job is faithful execution and honest \
+reporting.
 - Routines — I DO run things on a clock now: recurring DCA buys ("$100 \
 of BTC every morning at 9"), a scheduled briefing ping, a scheduled \
 flatten, and custom reminders. When the user asks for something \
@@ -642,6 +650,41 @@ def t_get_one_thing(_args):
                            store.list_convictions(mode), day_pnl)
 
 
+def t_list_sphinx_portfolios(_args):
+    ports = store.list_portfolios()
+    return {"portfolios": [{"id": p["id"], "name": p["name"],
+                            "source": p["source"], "status": p["status"],
+                            "targets": (p["spec"].get("targets") or [])}
+                           for p in ports],
+            "note": "adopt one only when the user clearly says yes to it"}
+
+
+def t_adopt_sphinx_portfolio(args):
+    guard = _paper_only()
+    if guard:
+        return guard
+    try:
+        return ENGINE.adopt_portfolio(int(args.get("id")))
+    except (TypeError, ValueError):
+        return {"error": "give me the portfolio id (list them first)"}
+
+
+def t_portfolio_status(_args):
+    snap = ENGINE._portfolio_snapshot()
+    if not snap:
+        return {"active_portfolio": None,
+                "note": "no adopted portfolio — Sphinx designs one, the "
+                        "user approves, I build and run it"}
+    return {"active_portfolio": snap}
+
+
+def t_rebalance_portfolio(_args):
+    guard = _paper_only()
+    if guard:
+        return guard
+    return ENGINE.rebalance_portfolio(force=True)
+
+
 def t_read_chart(args):
     if not ENGINE.market:
         return {"error": "the engine isn't running — no market data source"}
@@ -805,6 +848,19 @@ TOOLS = [
     {"name": "get_one_thing",
      "description": "The single most valuable true insight right now — ONE, or an honest 'nothing clears the bar today'. Use for briefings and 'anything I should know?'. Never deliver more than one proactive insight per day.",
      "input_schema": {"type": "object", "properties": {}}},
+    {"name": "list_sphinx_portfolios",
+     "description": "Portfolio designs offered by Sphinx (or stored specs): id, name, targets, and status (offered/active/retired).",
+     "input_schema": {"type": "object", "properties": {}}},
+    {"name": "adopt_sphinx_portfolio",
+     "description": "Build an offered portfolio for real on the demo account — buys every leg to its designed weight, then the engine keeps it on target automatically. ONLY on the user's clear yes to that specific design.",
+     "input_schema": {"type": "object", "required": ["id"],
+                      "properties": {"id": {"type": "integer"}}}},
+    {"name": "portfolio_status",
+     "description": "The active portfolio's target vs actual weights per leg, drift, and last rebalance — the truth of how well the design is being tracked.",
+     "input_schema": {"type": "object", "properties": {}}},
+    {"name": "rebalance_portfolio",
+     "description": "Rebalance the active portfolio back to its target weights right now, at the user's request (trims first, then adds; skips moves too small to beat fees).",
+     "input_schema": {"type": "object", "properties": {}}},
 ]
 
 _TOOL_IMPL = {
@@ -837,6 +893,10 @@ _TOOL_IMPL = {
     "my_track_record": t_my_track_record,
     "get_calibration": t_get_calibration,
     "get_one_thing": t_get_one_thing,
+    "list_sphinx_portfolios": t_list_sphinx_portfolios,
+    "adopt_sphinx_portfolio": t_adopt_sphinx_portfolio,
+    "portfolio_status": t_portfolio_status,
+    "rebalance_portfolio": t_rebalance_portfolio,
 }
 
 

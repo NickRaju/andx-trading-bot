@@ -313,6 +313,9 @@
   <div>
     <div class="card">
       <h2>Bot settings</h2>
+      <label for="studentId">Student ID <span style="color:var(--muted)">(competition — makes your bot unique)</span></label>
+      <input id="studentId" type="text" autocomplete="off" placeholder="your name or student number">
+      <div class="hint">Enter a unique ID and your bot's settings are seeded from it, so no two students trade the same. Edit <code>strategies.py</code> to override it with your own strategy.</div>
       <label for="mode">Trading mode</label>
       <select id="mode">
         <option value="paper">Paper (simulated — no keys needed)</option>
@@ -565,6 +568,7 @@ function fillForms() {
   st.innerHTML = Object.entries(state.strategies).map(([id, name]) =>
     `<option value="${id}" ${id === cfg.strategy ? "selected" : ""}>${name}</option>`).join("");
   $("mode").value = cfg.mode;
+  $("studentId").value = cfg.student_id || "";
   $("slowToggle").checked = !!cfg.slow_mode;
   $("derivToggle").checked = cfg.derivatives !== false;
   syncSwitchStates();
@@ -609,6 +613,7 @@ async function saveSettings(announce = true) {
   const body = {
     exchange: $("exchange").value,
     mode: $("mode").value,
+    student_id: $("studentId").value,
     strategy: $("strategy").value,
     symbols: $("symbols").value.split(","),
     timeframe: $("timeframe").value,

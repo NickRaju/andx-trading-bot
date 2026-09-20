@@ -50,9 +50,18 @@ Your keys are stored **only on your own computer** (`secrets.json`, which is git
 
 Risk controls: volatility-based position sizing, ATR stops, leverage/position caps, and a daily-loss kill switch. **ATR stop** = the auto exit price, set a few normal price-wiggles away from entry.
 
-## Editing the code (competition)
+## Competition — make your bot your own
 
-This is a template — click **"Use this template"** to get your own copy you can edit and commit to. The bot's brains live in `strategies.py` (signals) and `risk.py` (sizing/stops). Change them, restart the bot, and watch the difference in paper mode.
+**Step 1: enter your Student ID.** On the dashboard, open **Settings → Bot settings → Student ID** and type a unique ID (your name or student number). The bot **seeds its settings from your ID**, so every student's bot trades differently out of the box — no two overlap. Same ID always gives the same starting settings.
+
+**Step 2: edit the code to build your edge.** This is a GitHub **template** — click **"Use this template"** to get your own copy you can edit and commit. The bot's brain is `strategies.py` (the buy/sell logic); `risk.py` controls sizing and stops. For example, in `strategies.py`:
+```python
+fast = self.p("fast", 21)   # faster/slower moving averages
+slow = self.p("slow", 55)
+```
+Change the logic, **save**, then **quit and relaunch** the bot (code changes need a restart). Test in **paper mode** so mistakes cost practice money, not real money.
+
+Whatever you write in your own copy is what you submit — the more original your strategy, the more you stand out. Anything you set in the code overrides the Student-ID seeding.
 
 ## Disclaimer
 

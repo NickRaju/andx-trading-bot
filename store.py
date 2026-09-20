@@ -37,6 +37,7 @@ def _atomic_write_json(path: str, payload, mode: int | None = None):
 
 DEFAULT_CONFIG = {
     "exchange": "andx",
+    "student_id": "",             # competition: unique ID seeds this bot's settings so no two students overlap (blank = operator default)
     "symbols": ["ALL"],  # every tradeable ANDX pair; or list specific ones
     "timeframe": "1h",
     "strategy": "auto",
@@ -254,6 +255,12 @@ def _db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ts REAL, kind TEXT, symbol TEXT, detail TEXT, mode TEXT)"""
     )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS portfolios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT, source TEXT, spec TEXT, status TEXT,
+            created_ts REAL, adopted_ts REAL, last_rebalance_ts REAL)"""
+    )
     return conn
 
 
@@ -399,6 +406,71 @@ def routine_ran(routine_id: int, next_run_ts: float, result: str):
             "UPDATE routines SET last_run_ts=?, next_run_ts=?, last_result=? "
             "WHERE id=?",
             (time.time(), float(next_run_ts), str(result)[:200], int(routine_id)))
+
+
+# ---------------------------------------------------------- portfolios
+# Sphinx (or any designer) offers a portfolio spec; adoption makes it the
+# single ACTIVE portfolio the engine keeps on target. Spec is stored as
+# JSON exactly as offered — the engine never edits a design, only runs it.
+
+def add_portfolio(name: str, source: str, spec: dict) -> int:
+    with _lock, _db() as conn:
+        cur = conn.execute(
+            "INSERT INTO portfolios (name, source, spec, status, created_ts, "
+            "adopted_ts, last_rebalance_ts) VALUES (?,?,?,?,?,NULL,NULL)",
+            (str(name)[:80], str(source)[:40], json.dumps(spec), "offered",
+             time.time()))
+        return cur.lastrowid
+
+
+def list_portfolios(limit: int = 20) -> list[dict]:
+    with _lock, _db() as conn:
+        rows = conn.execute(
+            "SELECT id, name, source, spec, status, created_ts, adopted_ts, "
+            "last_rebalance_ts FROM portfolios ORDER BY id DESC LIMIT ?",
+            (limit,)).fetchall()
+    out = []
+    for r in rows:
+        try:
+            spec = json.loads(r[3])
+        except ValueError:
+            spec = {}
+        out.append({"id": r[0], "name": r[1], "source": r[2], "spec": spec,
+                    "status": r[4], "created_ts": r[5], "adopted_ts": r[6],
+                    "last_rebalance_ts": r[7]})
+    return out
+
+
+def get_active_portfolio() -> dict | None:
+    for p in list_portfolios():
+        if p["status"] == "active":
+            return p
+    return None
+
+
+def set_portfolio_status(portfolio_id: int, status: str,
+                         adopted: bool = False) -> bool:
+    with _lock, _db() as conn:
+        if status == "active":
+            # exactly one active portfolio at a time
+            conn.execute(
+                "UPDATE portfolios SET status='retired' WHERE status='active'")
+        if adopted:
+            cur = conn.execute(
+                "UPDATE portfolios SET status=?, adopted_ts=? WHERE id=?",
+                (status, time.time(), int(portfolio_id)))
+        else:
+            cur = conn.execute(
+                "UPDATE portfolios SET status=? WHERE id=?",
+                (status, int(portfolio_id)))
+        return cur.rowcount > 0
+
+
+def portfolio_rebalanced(portfolio_id: int):
+    with _lock, _db() as conn:
+        conn.execute(
+            "UPDATE portfolios SET last_rebalance_ts=? WHERE id=?",
+            (time.time(), int(portfolio_id)))
 
 
 # ------------------------------------------------- coach: raw material

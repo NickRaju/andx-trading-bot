@@ -15,7 +15,7 @@ import risk as risk_mod
 import store
 from exchange import (MarketData, PaperBroker, LiveBroker, AndxBroker,
                       AndxMarginBroker, Position)
-from strategies import make_strategy, atr, htf_bias
+from strategies import make_strategy, atr, htf_bias, seeded_params
 
 TIMEFRAME_SECONDS = {"15m": 900, "1h": 3600, "4h": 14400, "1d": 86400}
 
@@ -247,8 +247,19 @@ class BotEngine:
                 except Exception as e:
                     self.log(f"universe ranking skipped ({e}) — trading the full list", "warn")
 
+            # Competition mode: if a student ID is set (and no explicit params),
+            # seed each bot's parameters from the ID so no two students' bots
+            # trade the same. No student ID (e.g. the operator's own bot) ->
+            # unchanged behavior.
+            params = cfg.get("strategy_params")
+            if not params and cfg.get("student_id"):
+                params = seeded_params(str(cfg["student_id"]), cfg["strategy"])
+                self.log(f"competition mode — settings seeded from student ID "
+                         f"'{cfg['student_id']}' so this bot is unique "
+                         f"(fast={params['fast']}, slow={params['slow']}, "
+                         f"rsi {params['rsi_buy']}/{params['rsi_sell']})")
             self.strategies = {
-                s: make_strategy(cfg["strategy"], cfg.get("strategy_params"))
+                s: make_strategy(cfg["strategy"], params)
                 for s in cfg["symbols"]
             }
             self.volume_target_hit = False
@@ -649,6 +660,287 @@ class BotEngine:
             return {"updated": pos.to_dict(price)}
         return {"error": f"no open position on {symbol}"}
 
+    # ------------------------------------------------ portfolio management
+    # Sphinx (or any designer) writes the spec; this engine runs it. The
+    # design is never edited here — only bought to target, kept in band,
+    # and guarded. Demo-account only until live portfolios are approved.
+
+    PF_MAX_LEGS = 8
+    PF_MIN_TRADE_USD = 25.0
+
+    @staticmethod
+    def _pf_targets(spec: dict) -> list[dict]:
+        return [t for t in (spec.get("targets") or [])
+                if str(t.get("symbol", "")).upper() not in ("USDT", "CASH")]
+
+    def adopt_portfolio(self, portfolio_id: int) -> dict:
+        if not self.running or not self.broker:
+            return {"error": "the engine isn't running"}
+        if self.broker.mode != "paper":
+            return {"refused": "portfolio adoption runs on the demo account "
+                               "for now — live portfolios come with the "
+                               "production rollout"}
+        if self.kill_switch_tripped:
+            return {"error": "daily loss breaker is tripped — tomorrow"}
+        rec = next((p for p in store.list_portfolios()
+                    if p["id"] == int(portfolio_id)), None)
+        if not rec:
+            return {"error": "no portfolio with that id — list them first"}
+        spec = rec["spec"]
+        targets = self._pf_targets(spec)
+        if not targets:
+            return {"error": "that spec has no coin targets"}
+        if len(targets) > self.PF_MAX_LEGS:
+            return {"error": f"too many legs — I run up to {self.PF_MAX_LEGS}"}
+        total_w = sum(float(t.get("weight", 0)) for t in (spec.get("targets") or []))
+        if not 0.9 <= total_w <= 1.05:
+            return {"error": f"weights sum to {total_w:.2f} — they must add "
+                             "up to about 1.0"}
+        watched = set(self.strategies.keys())
+        equity = self.broker.equity(self.prices) + self._guard_value()
+        bought, skipped = [], []
+        from exchange import PAPER_SLIPPAGE
+        for t in targets:
+            symbol = str(t["symbol"]).upper()
+            if "/" not in symbol:
+                symbol += "/USDT"
+            w = float(t.get("weight", 0))
+            usd = equity * w
+            px = self.prices.get(symbol)
+            if symbol not in watched or not px:
+                skipped.append({"symbol": symbol, "why": "not watched / no price"})
+                continue
+            if usd < 10:
+                skipped.append({"symbol": symbol, "why": "leg under $10"})
+                continue
+            with self._order_lock:
+                pos = self.broker.positions.get(symbol)
+                if pos and pos.side == -1:
+                    skipped.append({"symbol": symbol, "why": "short open here"})
+                    continue
+                if pos:  # absorb an existing long into the portfolio
+                    pos.strategy = "portfolio"
+                    delta = usd - pos.qty * px
+                    if delta > self.PF_MIN_TRADE_USD:
+                        fill = px * (1 + PAPER_SLIPPAGE)
+                        q_i = delta / fill
+                        self.broker.balance -= fill * q_i * self.broker.taker_fee
+                        pos.entry = (pos.entry * pos.qty + fill * q_i) / (pos.qty + q_i)
+                        pos.qty += q_i
+                        store.record_fill(symbol, "buy", q_i, fill, self.broker.mode)
+                    elif delta < -self.PF_MIN_TRADE_USD:
+                        self._reduce_position(symbol, -delta / px, px, "adopt trim")
+                else:
+                    pos = self.broker.open(symbol, 1, usd / px, px,
+                                           px * 0.85, None, "portfolio")
+                    store.record_fill(symbol, "buy", pos.qty, pos.entry,
+                                      self.broker.mode)
+                pos.stop = max(pos.stop or 0.0, pos.entry * 0.85)
+                if pos.stop >= px:
+                    pos.stop = px * 0.85
+                pos.r_value = abs(pos.entry - pos.stop)
+                pos.high_water = pos.entry
+            bought.append({"symbol": symbol, "weight": w,
+                           "usd": round(usd, 2)})
+        if not bought:
+            return {"error": "no legs could be bought", "skipped": skipped}
+        store.set_portfolio_status(rec["id"], "active", adopted=True)
+        store.portfolio_rebalanced(rec["id"])
+        self._persist_positions()
+        self.log(f"PORTFOLIO adopted: '{rec['name']}' ({rec['source']}) — "
+                 f"{len(bought)} legs, ${sum(b['usd'] for b in bought):,.0f} "
+                 "deployed — I'll keep it on target")
+        self.notify("ANDX AI — portfolio live",
+                    f"'{rec['name']}' is built — {len(bought)} legs on the "
+                    "demo account. I'll keep it balanced.")
+        return {"adopted": rec["name"], "legs": bought, "skipped": skipped,
+                "note": "kept on target automatically; cash weight stays as "
+                        "free USDT by design"}
+
+    def _reduce_position(self, symbol: str, qty_out: float, price: float,
+                         reason: str):
+        """Paper partial close: sells qty_out at market, books the P&L slice
+        to the journal. Caller holds _order_lock."""
+        from exchange import PAPER_SLIPPAGE
+        pos = self.broker.positions.get(symbol)
+        if not pos or qty_out <= 0:
+            return
+        qty_out = min(qty_out, pos.qty)
+        fill = price * (1 - PAPER_SLIPPAGE * pos.side)
+        pnl = (fill - pos.entry) * qty_out * pos.side
+        fee = fill * qty_out * self.broker.taker_fee
+        self.broker.balance += pnl - fee
+        pos.qty -= qty_out
+        store.record_trade({"symbol": symbol, "side": pos.side,
+                            "qty": qty_out, "entry": pos.entry, "exit": fill,
+                            "pnl": pnl - fee, "strategy": pos.strategy,
+                            "opened_at": pos.opened_at},
+                           self.broker.mode, reason)
+        store.record_fill(symbol, "sell", qty_out, fill, self.broker.mode)
+        if pos.qty * price < 5:  # dust — close it out entirely
+            self.broker.positions.pop(symbol, None)
+
+    def rebalance_portfolio(self, force: bool = False) -> dict:
+        if not self.broker or self.broker.mode != "paper":
+            return {"error": "portfolio management runs on the demo account"}
+        rec = store.get_active_portfolio()
+        if not rec:
+            return {"error": "no active portfolio"}
+        spec = rec["spec"]
+        band = float((spec.get("rebalance") or {}).get("band_rel_pct", 20)) / 100
+        min_int = float((spec.get("rebalance") or {}).get("min_interval_h", 24)) * 3600
+        now = time.time()
+        if not force and rec["last_rebalance_ts"] and \
+                now - rec["last_rebalance_ts"] < min_int:
+            return {"skipped": "inside the minimum rebalance interval"}
+        equity = self.broker.equity(self.prices) + self._guard_value()
+        moves, drifted = [], False
+        for t in self._pf_targets(spec):
+            symbol = str(t["symbol"]).upper()
+            if "/" not in symbol:
+                symbol += "/USDT"
+            w = float(t.get("weight", 0))
+            px = self.prices.get(symbol)
+            if not px or w <= 0:
+                continue
+            pos = self.broker.positions.get(symbol)
+            actual = (pos.qty * px) if pos else 0.0
+            target = equity * w
+            if target > 0 and abs(actual - target) / target > band:
+                drifted = True
+            moves.append((symbol, px, actual, target))
+        if not force and not drifted:
+            return {"skipped": "everything inside its band"}
+        from exchange import PAPER_SLIPPAGE
+        done = []
+        with self._order_lock:
+            # trims first so the adds have cash to work with
+            for symbol, px, actual, target in moves:
+                delta = target - actual
+                if delta < -self.PF_MIN_TRADE_USD:
+                    self._reduce_position(symbol, -delta / px, px,
+                                          "rebalance trim")
+                    done.append({"symbol": symbol, "action": "trim",
+                                 "usd": round(-delta, 2)})
+            for symbol, px, actual, target in moves:
+                delta = target - actual
+                if delta > self.PF_MIN_TRADE_USD:
+                    pos = self.broker.positions.get(symbol)
+                    fill = px * (1 + PAPER_SLIPPAGE)
+                    q_i = delta / fill
+                    fee = fill * q_i * self.broker.taker_fee
+                    self.broker.balance -= fee
+                    if pos:
+                        pos.entry = (pos.entry * pos.qty + fill * q_i) / (pos.qty + q_i)
+                        pos.qty += q_i
+                    else:
+                        pos = self.broker.open(symbol, 1, q_i, px,
+                                               px * 0.85, None, "portfolio")
+                        self.broker.balance += fee  # open() charged it already
+                    pos.strategy = "portfolio"
+                    cand = max(pos.stop or 0.0, pos.entry * 0.85)
+                    pos.stop = cand if cand < px else px * 0.85
+                    pos.r_value = abs(pos.entry - pos.stop)
+                    store.record_fill(symbol, "buy", q_i, fill,
+                                      self.broker.mode)
+                    done.append({"symbol": symbol, "action": "add",
+                                 "usd": round(delta, 2)})
+        if not done:
+            return {"skipped": "drift too small to beat the fees — holding"}
+        store.portfolio_rebalanced(rec["id"])
+        self._persist_positions()
+        summary = ", ".join(f"{d['action']} {d['symbol'].split('/')[0]} "
+                            f"${d['usd']:,.0f}" for d in done)
+        self.log(f"PORTFOLIO rebalanced ('{rec['name']}'): {summary}")
+        self.notify("ANDX AI — rebalanced",
+                    f"'{rec['name']}' back on target: {summary}")
+        return {"rebalanced": done}
+
+    def _check_portfolio(self):
+        if not self.broker or self.broker.mode != "paper":
+            return
+        rec = store.get_active_portfolio()
+        if not rec:
+            return
+        if self.trade_mode == "auto":
+            self.rebalance_portfolio(force=False)
+        # in approve/manual the user rebalances by saying so — no nagging
+
+    def apply_protection(self, plan: dict) -> dict:
+        if not self.broker or self.broker.mode != "paper":
+            return {"refused": "protection plans apply to the demo account "
+                               "for now"}
+        applied, skipped = [], []
+        for s in (plan.get("stops") or []):
+            symbol = str(s.get("symbol", "")).upper()
+            if "/" not in symbol:
+                symbol += "/USDT"
+            try:
+                r = self.set_exit(symbol, stop=float(s.get("stop")))
+            except (TypeError, ValueError):
+                r = {"error": "bad stop"}
+            (applied if "updated" in r else skipped).append(
+                {"symbol": symbol, **({"stop": s.get("stop")} if "updated" in r
+                                      else {"why": r.get("error", "failed")})})
+        for a in (plan.get("alerts") or []):
+            symbol = str(a.get("symbol", "")).upper()
+            if "/" not in symbol:
+                symbol += "/USDT"
+            direction = str(a.get("direction", "")).lower()
+            try:
+                price = float(a.get("price"))
+            except (TypeError, ValueError):
+                skipped.append({"symbol": symbol, "why": "bad alert price"})
+                continue
+            if direction in ("above", "below") and symbol in self.strategies:
+                store.add_alert(symbol, direction, price, "sphinx protection")
+                applied.append({"symbol": symbol, "alert": f"{direction} {price}"})
+            else:
+                skipped.append({"symbol": symbol, "why": "not watched or bad direction"})
+        if applied:
+            self.log(f"protection plan applied: {len(applied)} item(s)")
+        return {"applied": applied, "skipped": skipped,
+                "note": ("drawdown auto-flatten rules arrive with guardian "
+                         "rules — noted but not enforced yet"
+                         if plan.get("flatten_if") else "")}
+
+    def _portfolio_snapshot(self) -> dict | None:
+        try:
+            rec = store.get_active_portfolio()
+        except Exception:
+            return None
+        if not rec or not self.broker:
+            return None
+        spec = rec["spec"]
+        equity = None
+        try:
+            equity = self.broker.equity(self.prices) + self._guard_value()
+        except Exception:
+            return None
+        rows = []
+        # cash = what ISN'T deployed (the paper ledger only moves on fees,
+        # so broker.balance would lie here — compute from notional instead)
+        deployed = sum(p.qty * self.prices.get(s, p.entry)
+                       for s, p in list(self.broker.positions.items()))
+        for t in (spec.get("targets") or []):
+            symbol = str(t.get("symbol", "")).upper()
+            w = float(t.get("weight", 0))
+            if symbol in ("USDT", "CASH"):
+                actual = max(0.0, equity - deployed)
+            else:
+                if "/" not in symbol:
+                    symbol += "/USDT"
+                pos = self.broker.positions.get(symbol)
+                px = self.prices.get(symbol)
+                actual = (pos.qty * px) if (pos and px) else 0.0
+            rows.append({"symbol": symbol, "target_w": w,
+                         "actual_w": round(actual / equity, 4) if equity else 0,
+                         "actual_usd": round(actual, 2)})
+        return {"id": rec["id"], "name": rec["name"], "source": rec["source"],
+                "targets": rows, "last_rebalance_ts": rec["last_rebalance_ts"],
+                "chart_embed": spec.get("chart_embed"),
+                "band_rel_pct": (spec.get("rebalance") or {}).get("band_rel_pct", 20)}
+
     # ---------------------------------------------------------------- loop
 
     def _loop(self, cfg: dict, gen: int):
@@ -727,6 +1019,12 @@ class BotEngine:
             self._check_routines(gen)
         except Exception as e:
             self.log(f"routine check failed: {e}", "warn")
+
+        # -- adopted portfolio: keep it on the designer's targets
+        try:
+            self._check_portfolio()
+        except Exception as e:
+            self.log(f"portfolio check failed: {e}", "warn")
 
         if hasattr(self.broker, "_sync_balance"):
             try:  # keeps equity honest across settlement lag & external transfers
@@ -876,13 +1174,16 @@ class BotEngine:
             if pos and pos.stop and not getattr(pos, "r_value", 0.0):
                 pos.r_value = abs(pos.entry - pos.stop)
 
-            # user-commanded (manual) positions: the stop/TP checks above
-            # still protect them, but the engine never signal-exits them,
-            # never moves their levels, and never stacks its own trade on
-            # the same symbol — the user took this one over
-            if pos and getattr(pos, "strategy", "") == "manual":
-                self.last_signals[symbol] = ("manual long (yours)" if pos.side == 1
-                                             else "manual short (yours)")
+            # user-commanded (manual) and portfolio legs: the stop/TP checks
+            # above still protect them, but the strategy loop never
+            # signal-exits them, never moves their levels, and never stacks
+            # its own trade on the same symbol
+            _tag = getattr(pos, "strategy", "") if pos else ""
+            if pos and _tag in ("manual", "portfolio"):
+                self.last_signals[symbol] = (
+                    "portfolio leg (managed to target)" if _tag == "portfolio"
+                    else ("manual long (yours)" if pos.side == 1
+                          else "manual short (yours)"))
                 continue
 
             # smart exits: break-even (plus fees) after +1R for every
@@ -1667,6 +1968,7 @@ class BotEngine:
             "proposals": self._proposals_snapshot(),
             "alerts": self._alerts_snapshot(),
             "routines": self._routines_snapshot(),
+            "sphinx_portfolio": self._portfolio_snapshot(),
             "error": self.error,
             "kill_switch": self.kill_switch_tripped,
             "data_source": self.market.active_source if self.market else None,
