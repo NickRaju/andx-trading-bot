@@ -56,6 +56,8 @@
   .step b{font-weight:650}
   .step p{font-size:14px;color:var(--ink2);margin-top:3px}
   .mac,.win{display:none}
+  .secbox{background:rgba(250,178,25,.10);border:1px solid rgba(250,178,25,.35);border-radius:10px;padding:2px 14px;margin-top:8px}
+  .secbox p{color:var(--ink2)}
   code{background:#0c0c0d;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font:13px/1 ui-monospace,Menlo,monospace}
   .safe{margin-top:24px;font-size:13.5px;color:var(--ink2);text-align:center;line-height:1.7}
   .safe b{color:var(--good)}
@@ -77,6 +79,7 @@
       Download ANDX Trading Bot
     </a>
     <div class="sub" id="sub">Free · Mac &amp; Windows · starts in safe practice mode</div>
+    <div class="sub" style="margin-top:8px">Your computer will ask <b>once</b> if you trust it — that's normal for any downloaded app. Step 2 below shows the exact clicks.</div>
   </div>
 
   <div class="steps">
@@ -88,10 +91,12 @@
     <div class="step">
       <div class="num">2</div>
       <div>
-        <b>Open the launcher (one-time security step).</b>
-        <p class="mac">Your Mac blocks downloaded programs the first time — that's normal. <b>Right-click</b> <code>Start Bot.command</code> → <b>Open</b> → <b>Open</b> in the popup. <br><br>If you instead see <i>“Apple could not verify…”</i> with only <b>Done</b> / <b>Move to Trash</b>: click <b>Done</b>, then open  <b>menu → System Settings → Privacy &amp; Security</b>, scroll down, and click <b>“Open Anyway.”</b> You only do this once.</p>
-        <p class="win">Double-click <code>Start Bot (Windows).bat</code>. If Windows shows a blue “Windows protected your PC” box, click <b>More info → Run anyway</b>. If it says Python is missing, install it from python.org (tick “Add Python to PATH”) and run it again.</p>
+        <b>Open the launcher (one-time — your computer asks if you trust it).</b>
+        <div class="secbox">
+        <p class="mac">This is normal for any downloaded app — it's safe. <b>Right-click</b> <code>Start Bot.command</code> → <b>Open</b> → <b>Open</b>. <br><br>If you instead see <i>“Apple could not verify…”</i> with only <b>Done</b> / <b>Move to Trash</b>: click <b>Done</b>, then open  <b>menu → System Settings → Privacy &amp; Security</b>, scroll down, and click <b>“Open Anyway.”</b> You only do this once.</p>
+        <p class="win">Double-click <code>Start Bot (Windows).bat</code>. If Windows shows a blue “Windows protected your PC” box, click <b>More info → Run anyway</b> — this is normal and safe. If it says Python is missing, install it from python.org (tick “Add Python to PATH”) and run it again.</p>
         <p class="generic">Mac: right-click <code>Start Bot.command</code> → Open → Open. Windows: double-click <code>Start Bot (Windows).bat</code> → More info → Run anyway.</p>
+        </div>
       </div>
     </div>
     <div class="step">
