@@ -58,6 +58,8 @@
   .mac,.win{display:none}
   .secbox{background:rgba(250,178,25,.10);border:1px solid rgba(250,178,25,.35);border-radius:10px;padding:2px 14px;margin-top:8px}
   .secbox p{color:var(--ink2)}
+  .cmd{background:#000;border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}
+  .cmd code{color:#7db4ff;font:13px/1.5 ui-monospace,Menlo,monospace;white-space:pre;user-select:all}
   code{background:#0c0c0d;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font:13px/1 ui-monospace,Menlo,monospace}
   .safe{margin-top:24px;font-size:13.5px;color:var(--ink2);text-align:center;line-height:1.7}
   .safe b{color:var(--good)}
@@ -79,11 +81,17 @@
       Download ANDX Trading Bot
     </a>
     <div class="sub" id="sub">Free · Mac &amp; Windows · starts in safe practice mode</div>
-    <div class="sub" style="margin-top:8px">Your computer will ask <b>once</b> if you trust it — that's normal for any downloaded app. Step 2 below shows the exact clicks.</div>
+  </div>
+
+  <div class="steps" style="margin-top:28px">
+    <h2>✅ No-warning install (Mac — recommended)</h2>
+    <p class="lede" style="font-size:15px;text-align:left;margin-bottom:14px">Skip the security warning entirely. Open <b>Terminal</b> (press ⌘+Space, type <b>Terminal</b>, Enter), paste this one line, and press Enter — it downloads, sets up, and opens the bot:</p>
+    <div class="cmd"><code>curl -fsSL https://raw.githubusercontent.com/NickRaju/andx-trading-bot/main/install.sh | bash</code></div>
+    <p class="sub" style="text-align:left;margin-top:10px">Nothing to double-click, no security prompt — because Terminal downloads don't get flagged. If Python isn't installed it'll tell you where to get it.</p>
   </div>
 
   <div class="steps">
-    <h2>After it downloads — 3 quick steps</h2>
+    <h2>Or download &amp; double-click (Windows, or if you prefer)</h2>
     <div class="step">
       <div class="num">1</div>
       <div><b>Unzip it.</b><p>Double-click the downloaded file to get the <code>andx-trading-bot-main</code> folder.</p></div>

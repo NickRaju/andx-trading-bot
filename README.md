@@ -6,7 +6,19 @@ in a safe practice mode so you can learn before risking anything.
 
 ---
 
-## ⬇️ Download & run (students start here)
+## ✅ Easiest on Mac — no security warning (recommended)
+
+Open **Terminal** (press ⌘+Space, type **Terminal**, press Enter), paste this one line, and press Enter:
+
+```
+curl -fsSL https://raw.githubusercontent.com/NickRaju/andx-trading-bot/main/install.sh | bash
+```
+
+It downloads, sets up, and opens the bot — **with no security prompt at all** (Terminal downloads aren't flagged the way browser downloads are). Your files land in `~/andx-trading-bot`. To start it again later, paste the same line.
+
+---
+
+## ⬇️ Or download & double-click
 
 **[➡️ Click here to download the bot (.zip)](https://github.com/NickRaju/andx-trading-bot/archive/refs/heads/main.zip)**
 
