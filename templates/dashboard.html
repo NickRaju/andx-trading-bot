@@ -4,71 +4,77 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ANDX Trading Bot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* Theme tokens — light is the base, dark overrides. The viewer's system
-     preference decides by default; the 🌓 button pins an explicit choice. */
+  /* ANDX identity: IBM Plex typography + a violet quant palette. Numbers are
+     mono (terminal feel), labels are mono-uppercase, text is Plex Sans.
+     Light is the base; dark overrides; the theme button pins a choice. */
   :root {
     color-scheme: light;
-    --page: #f4f4f1;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    --page: #f2f2f6;
     --surface: #ffffff;
-    --ink: #14130f;
-    --ink-2: #52514e;
-    --muted: #898781;
-    --grid: #e1e0d9;
-    --baseline: #c3c2b7;
-    --border: rgba(11,11,11,0.10);
-    --series-1: #2a78d6;      /* equity line */
-    --good: #006300;
+    --ink: #16151d;
+    --ink-2: #57545f;
+    --muted: #8b8894;
+    --grid: #e6e5ec;
+    --baseline: #c6c4d0;
+    --border: rgba(22,21,29,0.11);
+    --series-1: #5a2fe0;      /* signature violet */
+    --good: #0a7a48;
     --warn: #8a5f00;
-    --warn-bg: rgba(250,178,25,.14);
+    --warn-bg: rgba(233,168,20,.14);
     --warn-bd: rgba(138,95,0,.35);
-    --critical: #c23434;
-    --crit-bg: rgba(208,59,59,.10);
-    --crit-ink: #a52828;
+    --critical: #c2295a;
+    --crit-bg: rgba(194,41,90,.09);
+    --crit-ink: #a51f4c;
     --accent-ink: #ffffff;
-    --shadow: 0 1px 2px rgba(11,11,11,.05);
+    --shadow: 0 1px 2px rgba(22,21,29,.05);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --page: #0d0d0d;
-      --surface: #1a1a19;
-      --ink: #ffffff;
-      --ink-2: #c3c2b7;
-      --muted: #898781;
-      --grid: #2c2c2a;
-      --baseline: #383835;
-      --border: rgba(255,255,255,0.10);
-      --series-1: #3987e5;
-      --good: #0ca30c;
-      --warn: #fab219;
-      --warn-bg: rgba(250,178,25,.12);
-      --warn-bd: rgba(250,178,25,.4);
-      --critical: #d03b3b;
-      --crit-bg: rgba(208,59,59,.12);
-      --crit-ink: #ff8f8f;
+      --page: #0a0910;
+      --surface: #14131c;
+      --ink: #f4f3fa;
+      --ink-2: #b6b3c6;
+      --muted: #817e93;
+      --grid: #23212f;
+      --baseline: #34314a;
+      --border: rgba(255,255,255,0.09);
+      --series-1: #9d84ff;
+      --good: #1fc07a;
+      --warn: #f2b52c;
+      --warn-bg: rgba(242,181,44,.12);
+      --warn-bd: rgba(242,181,44,.4);
+      --critical: #ff4d80;
+      --crit-bg: rgba(255,77,128,.12);
+      --crit-ink: #ff86a8;
       --accent-ink: #ffffff;
       --shadow: none;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --page: #0d0d0d;
-    --surface: #1a1a19;
-    --ink: #ffffff;
-    --ink-2: #c3c2b7;
-    --muted: #898781;
-    --grid: #2c2c2a;
-    --baseline: #383835;
-    --border: rgba(255,255,255,0.10);
-    --series-1: #3987e5;
-    --good: #0ca30c;
-    --warn: #fab219;
-    --warn-bg: rgba(250,178,25,.12);
-    --warn-bd: rgba(250,178,25,.4);
-    --critical: #d03b3b;
-    --crit-bg: rgba(208,59,59,.12);
-    --crit-ink: #ff8f8f;
+    --page: #0a0910;
+    --surface: #14131c;
+    --ink: #f4f3fa;
+    --ink-2: #b6b3c6;
+    --muted: #817e93;
+    --grid: #23212f;
+    --baseline: #34314a;
+    --border: rgba(255,255,255,0.09);
+    --series-1: #9d84ff;
+    --good: #1fc07a;
+    --warn: #f2b52c;
+    --warn-bg: rgba(242,181,44,.12);
+    --warn-bd: rgba(242,181,44,.4);
+    --critical: #ff4d80;
+    --crit-bg: rgba(255,77,128,.12);
+    --crit-ink: #ff86a8;
     --accent-ink: #ffffff;
     --shadow: none;
   }
@@ -76,18 +82,20 @@
   body {
     background: var(--page);
     color: var(--ink);
-    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 14px/1.5 var(--sans);
+    -webkit-font-smoothing: antialiased;
   }
   .wrap { max-width: 1240px; margin: 0 auto; padding: 0 20px 40px; }
-  h1 { font-size: 17px; font-weight: 650; white-space: nowrap; }
-  h2 { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+  h1 { font-family: var(--mono); font-size: 15px; font-weight: 600; white-space: nowrap; letter-spacing: .14em; text-transform: uppercase; }
+  h1 .dot { color: var(--series-1); }
+  h2 { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .14em; margin-bottom: 12px; }
   .topbar {
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
     padding: 14px 20px; margin: 0 -20px 16px;
     position: sticky; top: 0; z-index: 20;
     background: var(--page); border-bottom: 1px solid var(--border);
   }
-  .badge { font-size: 11px; font-weight: 700; letter-spacing: .08em; padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border); color: var(--ink-2); }
+  .badge { font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: .12em; padding: 3px 9px; border-radius: 5px; border: 1px solid var(--border); color: var(--ink-2); }
   .badge.live { color: #fff; background: var(--critical); border-color: transparent; }
   .badge.testnet { color: #14130f; background: #fab219; border-color: transparent; }
   .iconbtn {
@@ -101,8 +109,9 @@
   }
   .tab {
     border: none; background: none; color: var(--ink-2);
-    font: inherit; font-size: 13.5px; font-weight: 600;
-    padding: 7px 18px; border-radius: 7px; cursor: pointer; white-space: nowrap;
+    font-family: var(--mono); font-size: 11px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: .1em;
+    padding: 8px 16px; border-radius: 6px; cursor: pointer; white-space: nowrap;
   }
   .tab:hover { color: var(--ink); }
   .tab.active { background: var(--series-1); color: var(--accent-ink); }
@@ -154,14 +163,14 @@
 
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 16px; }
   .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); }
-  .tile .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-  .tile .v { font-size: 22px; font-weight: 650; margin-top: 2px; }
-  .tile .s { font-size: 12px; color: var(--ink-2); }
+  .tile .k { font-family: var(--mono); font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; }
+  .tile .v { font-family: var(--mono); font-size: 23px; font-weight: 600; margin-top: 4px; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+  .tile .s { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
   .up { color: var(--good); } .down { color: var(--critical); }
 
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-  th { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; text-align: left; font-weight: 600; padding: 5px 8px; border-bottom: 1px solid var(--baseline); }
-  td { padding: 6px 8px; border-bottom: 1px solid var(--grid); font-size: 13px; }
+  th { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; text-align: left; font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--baseline); }
+  td { font-family: var(--mono); padding: 7px 8px; border-bottom: 1px solid var(--grid); font-size: 12.5px; }
   tr:last-child td { border-bottom: none; }
   .side-long  { color: var(--good); font-weight: 600; }
   .side-short { color: var(--critical); font-weight: 600; }
@@ -196,7 +205,7 @@
   .logs .warn { color: var(--warn); } .logs .error { color: var(--critical); }
   .logs .ts { color: var(--muted); margin-right: 8px; }
   .signals { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
-  .sig { border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; font-size: 12.5px; color: var(--ink-2); }
+  .sig { font-family: var(--mono); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--ink-2); }
   .sig b { color: var(--ink); font-weight: 600; }
   .sig.long { border-color: rgba(12,163,12,.45); }  .sig.long b { color: var(--good); }
   .sig.short { border-color: rgba(208,59,59,.5); }  .sig.short b { color: var(--critical); }
@@ -222,7 +231,7 @@
 <div class="wrap">
 
 <div class="topbar">
-  <h1>ANDX Trading Bot</h1>
+  <h1>ANDX <span class="dot">·</span> Trading Bot</h1>
   <span id="modeBadge" class="badge">PAPER</span>
   <span><span id="statusDot" class="dot"></span> <span id="statusTxt" style="color:var(--ink-2)">stopped</span></span>
   <span id="dataSource" style="font-size:12px;color:var(--muted)"></span>
