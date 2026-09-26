@@ -17,6 +17,15 @@ if (-not $py) {
   return
 }
 
+# Old Python cannot run this app (it needs 3.10+).
+& $py -c "import sys; raise SystemExit(0 if sys.version_info >= (3,10) else 1)"
+if ($LASTEXITCODE -ne 0) {
+  Write-Host ""
+  Write-Host "Your Python is too old (this bot needs Python 3.10 or newer)."
+  Write-Host "Install the latest from https://www.python.org/downloads/ then run this command again."
+  return
+}
+
 if (-not (Test-Path $dir)) {
   Write-Host "Downloading the ANDX Trading Bot..."
   Invoke-WebRequest "https://github.com/andxtrading/andx-trading-bot/archive/refs/heads/main.zip" -OutFile $zip
