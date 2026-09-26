@@ -14,6 +14,14 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
+# Apple/Xcode ship an old Python (3.9) that cannot run this app (it needs 3.10+).
+if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' 2>/dev/null; then
+  echo ""
+  echo "Your Python is too old (this bot needs Python 3.10 or newer)."
+  echo "Install the latest from https://www.python.org/downloads/ then run this command again."
+  exit 1
+fi
+
 if [ ! -d "$DIR" ]; then
   echo "Downloading the ANDX Trading Bot..."
   curl -fsSL "$ZIP_URL" -o /tmp/andx-bot.zip
